@@ -20,11 +20,20 @@ trait NibbleUtil {
 }
 
 impl NibbleUtil for u16 {
+    /// # Nibble Mapping
+    ///
+    /// 0 => S00 = [b0 b1 b2 b3]
+    ///
+    /// 1 => S01 = [b8 b9 b10 b11]
+    ///
+    /// 2 => S10 = [b4 b5 b6 b7]
+    ///
+    /// 3 => S11 = [b12 b13 b14 b15]
     fn get_nibble_val(&self, idx: u8) -> u16 {
         let shifted = match idx {
             0 => *self >> 12u8,
-            1 => *self >> 8u8,
-            2 => *self >> 4u8,
+            1 => *self >> 4u8,
+            2 => *self >> 8u8,
             3 => *self,
             _ => panic!("Invalid index: {} passed!", idx),
         };
@@ -119,14 +128,19 @@ static MULT_TABLE: [[u8; 16]; 16] = [
 /// # Shift Rows
 /// Returns the state after swapping the lower nibbles
 fn shift_row(state: u16) -> u16 {
-    let upper_half = state.get_upper_half();
-    (upper_half << 8u8) | shift_row_byte(state)
+    let s00 = state.get_nibble_val(0);
+    let s01 = state.get_nibble_val(1);
+    let s10 = state.get_nibble_val(2);
+    let s11 = state.get_nibble_val(3);
+
+    (s00 << 12) | (s01 << 4) | (s11 << 8) | s10
 }
 
+/// # Used to rotate key
 fn shift_row_byte(state: u16) -> u16 {
-    let n2 = state.get_nibble_val(2);
+    let n1 = state.get_nibble_val(1);
     let n3 = state.get_nibble_val(3);
-    (n3 << 4u8) | n2
+    (n3 << 4u8) | n1
 }
 
 /// # Add Key
@@ -143,7 +157,8 @@ fn nibble_sub(state: u16, is_inverse: bool) -> u16 {
     let s01 = nib_sub(state, 1, is_inverse);
     let s10 = nib_sub(state, 2, is_inverse);
     let s11 = nib_sub(state, 3, is_inverse);
-    (s00 << 12) | (s01 << 8) | (s10 << 4) | s11
+
+    (s00 << 12) | (s01 << 4) | (s10 << 8) | s11
 }
 
 fn nib_sub(state: u16, idx: u8, is_inverse: bool) -> u16 {
@@ -214,7 +229,7 @@ fn mix_col(state: u16) -> u16 {
         sn00, sn01, sn10, sn11
     );
 
-    (sn00 << 12) | (sn01 << 8) | (sn10 << 4) | sn11
+    (sn00 << 12) | (sn01 << 4) | (sn10 << 8) | sn11
 }
 
 fn get_mult_val(fst: u16, snd: u16) -> u16 {
@@ -232,7 +247,7 @@ fn inv_mix_col(state: u16) -> u16 {
     let sn01 = get_mult_val(9, s01) ^ get_mult_val(2, s11);
     let sn11 = get_mult_val(2, s01) ^ get_mult_val(9, s11);
 
-    (sn00 << 12) | (sn01 << 8) | (sn10 << 4) | sn11
+    (sn00 << 12) | (sn01 << 4) | (sn10 << 8) | sn11
 }
 
 fn encrypt(plaintext: u16, keys: &Vec<u16>) -> u16 {
@@ -321,7 +336,7 @@ fn decrypt(ciphertext: u16, keys: &Vec<u16>) -> u16 {
     );
 
     // Nibble Sub
-    plaintext = nibble_sub(plaintext, false);
+    plaintext = nibble_sub(plaintext, true);
 
     println!(
         "After Nib Sub 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
@@ -355,7 +370,7 @@ fn decrypt(ciphertext: u16, keys: &Vec<u16>) -> u16 {
     );
 
     // Nibble Sub
-    plaintext = nibble_sub(plaintext, false);
+    plaintext = nibble_sub(plaintext, true);
 
     println!(
         "After Nib Sub 2 Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
