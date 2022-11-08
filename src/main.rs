@@ -167,11 +167,6 @@ fn nib_sub(state: u16, idx: u8, is_inverse: bool) -> u16 {
     let row_idx = nib_val.get_leftmost_2bits();
     let col_idx = nib_val.get_rightmost_2bits();
 
-    // println!(
-    //     "State: {:#X}, Idx: {}, Nib Val: {:#b} Row Idx: {:#b}, Col Idx: {:#b}",
-    //     state, idx, nib_val, row_idx, col_idx
-    // );
-
     match is_inverse {
         true => INV_S_BOX[row_idx as usize][col_idx as usize].into(),
         false => S_BOX[row_idx as usize][col_idx as usize].into(),
@@ -204,30 +199,10 @@ fn mix_col(state: u16) -> u16 {
     let s10 = state.get_nibble_val(2);
     let s11 = state.get_nibble_val(3);
 
-    println!(
-        "Before Mix Col\n
-        s00 = {:#06b}\n
-        s01 = {:#06b}\n
-        s10 = {:#06b}\n
-        s11 = {:#06b}\n
-    ",
-        s00, s01, s10, s11
-    );
-
     let sn00 = s00 ^ get_mult_val(4, s10);
     let sn10 = s10 ^ get_mult_val(4, s00);
     let sn01 = s01 ^ get_mult_val(4, s11);
     let sn11 = s11 ^ get_mult_val(4, s01);
-
-    println!(
-        "Before Mix Col\n
-        sn00 = {:#06b}\n
-        sn01 = {:#06b}\n
-        sn10 = {:#06b}\n
-        sn11 = {:#06b}\n
-    ",
-        sn00, sn01, sn10, sn11
-    );
 
     (sn00 << 12) | (sn01 << 4) | (sn10 << 8) | sn11
 }
@@ -254,136 +229,61 @@ fn encrypt(plaintext: u16, keys: &Vec<u16>) -> u16 {
     // Add Round 0 Key
     let mut cipher = add_key(plaintext, keys[0]);
 
-    println!(
-        "After add Round 0 key: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     // Round 1
     // Nibble Sub
     cipher = nibble_sub(cipher, false);
 
-    println!(
-        "After Nib Sub 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
-
     // Shift Row
     cipher = shift_row(cipher);
 
-    println!(
-        "After Shift Row 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     // Mix Col
     cipher = mix_col(cipher);
 
-    println!(
-        "After Mix Col 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     // Add Round 1 Key
     cipher = add_key(cipher, keys[1]);
 
-    println!(
-        "After add key 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     // Round 2
 
     // Nibble Sub
     cipher = nibble_sub(cipher, false);
 
-    println!(
-        "After Nib Sub 2 Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     // Shift Row
     cipher = shift_row(cipher);
 
-    println!(
-        "After Shift Row 2 Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     // Add Round 2 Key
     cipher = add_key(cipher, keys[2]);
 
-    println!(
-        "After round key 2: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        cipher, cipher
-    );
     cipher
 }
 
 fn decrypt(ciphertext: u16, keys: &Vec<u16>) -> u16 {
-    println!("In decryption process");
-
     // Add Round 0 Key
     let mut plaintext = add_key(ciphertext, keys[2]);
-
-    println!(
-        "After add Round 0 key: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
 
     // Round 1
 
     // Shift Row
     plaintext = shift_row(plaintext);
 
-    println!(
-        "After Shift Row 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
-
     // Nibble Sub
     plaintext = nibble_sub(plaintext, true);
-
-    println!(
-        "After Nib Sub 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
 
     // Add Round 1 Key
     plaintext = add_key(plaintext, keys[1]);
 
-    println!(
-        "After add key 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
-
     // Mix Col
     plaintext = inv_mix_col(plaintext);
-
-    println!(
-        "After Mix Col 1: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
 
     // Round 2
 
     // Shift Row
     plaintext = shift_row(plaintext);
 
-    println!(
-        "After Shift Row 2 Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
-
     // Nibble Sub
     plaintext = nibble_sub(plaintext, true);
 
-    println!(
-        "After Nib Sub 2 Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
-
     // Add Round 2 Key
     plaintext = add_key(plaintext, keys[0]);
-
-    println!(
-        "After round key 2: Ciphertext : \nHex : {:#X}\nBinary : {:#018b}",
-        plaintext, plaintext
-    );
 
     plaintext
 }
